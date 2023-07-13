@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type TransferRequest struct {
+	ToAccountID int `json:"to_account_id"`
+	Amount    int `json:"amount"`
+}
+
 type Account struct {
 	ID            int       `json:"id"`
 	FirstName     string    `json:"first_name"`
@@ -16,7 +21,6 @@ type Account struct {
 
 func NewAccount(firstName, lastName string) *Account {
 	return &Account{
-		ID:            rand.Intn(1000),
 		FirstName:     firstName,
 		LastName:      lastName,
 		AccountNumber: int64(rand.Intn(10000000)),
