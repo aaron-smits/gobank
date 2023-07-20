@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 type APIServer struct {
@@ -26,9 +24,9 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() {
 	router := chi.NewRouter()
-	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
+	router.HandleFunc("/account", withJWTAuth(makeHTTPHandleFunc(s.handleAccount)))
 	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleGetAccountByID)))
-	router.HandleFunc("/transfer", makeHTTPHandleFunc(s.handleTransfer))
+	router.HandleFunc("/transfer", withJWTAuth(makeHTTPHandleFunc(s.handleTransfer)))
 
 	log.Println("JSON API server running on", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
@@ -85,6 +83,12 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
+	tokenString, err := makeJWTToken(account)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("tokenString", tokenString)
 
 	return WriteJSON(w, http.StatusOK, account)
 }
@@ -114,39 +118,12 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	return WriteJSON(w, http.StatusOK, transferReq)
 }
 
+
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(v)
 }
-
-func withJWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("call to JWT middleware")
-		
-		tokenStr := r.Header.Get("x-jwt-token")
-		_, err := validateJWTToken(tokenStr)
-		if err != nil {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized"})
-			return
-		}
-		handlerFunc(w, r)
-	}
-}
-
-func validateJWTToken(token string) (*jwt.Token, error) {
-	secret := os.Getenv("JWT_SECRET")
-
-	return jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-
-		return []byte(secret), nil
-	})
-}
-
 
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
 
