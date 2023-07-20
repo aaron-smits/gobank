@@ -59,7 +59,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 			return
 		}
 		claims := token.Claims.(jwt.MapClaims)
-		if account.AccountNumber != claims["account_number"] {
+		if account.AccountNumber != int64(claims["account_number"].(float64)) {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
 			return
 		}

@@ -43,13 +43,39 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	accounts, err := s.store.GetAccounts()
-	if err != nil {
-		return err
-	}
+func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
+	if r.Method == "GET" {
+		accounts, err := s.store.GetAccounts()
+		if err != nil {
+			return err
+		}
 
-	return WriteJSON(w, http.StatusOK, accounts)
+		return WriteJSON(w, http.StatusOK, accounts)
+	}
+	if r.Method == "POST" {
+		loginReq := new(LoginRequest)
+        if err := json.NewDecoder(r.Body).Decode(loginReq); err != nil {
+            return err
+        }
+
+        account, err := s.store.GetAccountByEmail(loginReq.Email)
+        if err != nil {
+            return err
+        }
+
+        if account == nil || !account.CheckPassword(loginReq.Password) {
+            return fmt.Errorf("invalid email or password")
+        }
+
+        tokenString, err := makeJWTToken(account)
+        if err != nil {
+            return err
+        }
+
+        return WriteJSON(w, http.StatusOK, map[string]string{"token": tokenString})
+    }
+
+    return fmt.Errorf("unsupported method %s", r.Method)
 }
 
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
