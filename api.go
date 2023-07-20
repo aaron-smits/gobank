@@ -24,9 +24,9 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() {
 	router := chi.NewRouter()
-	router.HandleFunc("/account", withJWTAuth(makeHTTPHandleFunc(s.handleAccount)))
-	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleGetAccountByID)))
-	router.HandleFunc("/transfer", withJWTAuth(makeHTTPHandleFunc(s.handleTransfer)))
+	router.HandleFunc("/account", withJWTAuth(makeHTTPHandleFunc(s.handleAccount), s.store))
+	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleGetAccountByID), s.store))
+	router.HandleFunc("/transfer", withJWTAuth(makeHTTPHandleFunc(s.handleTransfer), s.store))
 
 	log.Println("JSON API server running on", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
@@ -137,4 +137,15 @@ func makeHTTPHandleFunc(fn apiFunc) http.HandlerFunc {
 			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
 	}
+}
+
+
+func getID(r *http.Request) (int, error) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid id %s", idStr)
+	}
+
+	return id, nil
 }
