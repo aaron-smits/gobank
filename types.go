@@ -22,8 +22,12 @@ type Account struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+func (a *Account) ComparePassword(pw string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
+}
+
 func NewAccount(firstName, lastName, password string) (*Account, error) {
-	encpw, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	encpw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +47,11 @@ func NewAccount(firstName, lastName, password string) (*Account, error) {
 type LoginRequest struct {
 	AccountNumber int64 `json:"account_number"`
 	Password      string `json:"password"`
+}
+
+type LoginResponse struct {
+	AccountNumber int64 `json:"account_number"`
+	Token         string `json:"token"`
 }
 
 type CreateAccountRequest struct {

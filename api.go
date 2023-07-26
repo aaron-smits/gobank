@@ -36,16 +36,29 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != "POST" {
 		return fmt.Errorf("unsupported method %s", r.Method)
 	}
-	if r.Method == "POST" {
-		return s.handleCreateAccount(w, r)
-	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return err
 	}
 
-	return WriteJSON(w, http.StatusOK, req)
+	account, err := s.store.GetAccountByNumber(int(req.AccountNumber))
+	if err != nil {
+		return err
+	}
+	if !account.ComparePassword(req.Password) {
+		return fmt.Errorf("unauthorized")
+	}
+	token, err := makeJWTToken(account)
+	if err != nil {
+		return err
+	}
+	resp := LoginResponse{
+		AccountNumber: account.AccountNumber,
+		Token:         token,
+	}
+
+	return WriteJSON(w, http.StatusOK, resp)
 }
 
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
@@ -137,7 +150,6 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	return WriteJSON(w, http.StatusOK, transferReq)
 }
 
-
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -157,7 +169,6 @@ func makeHTTPHandleFunc(fn apiFunc) http.HandlerFunc {
 		}
 	}
 }
-
 
 func getID(r *http.Request) (int, error) {
 	idStr := chi.URLParam(r, "id")

@@ -33,7 +33,6 @@ func validateJWTToken(token string) (*jwt.Token, error) {
 	})
 }
 
-
 func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("call to JWT middleware")
@@ -59,10 +58,12 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 			return
 		}
 		claims := token.Claims.(jwt.MapClaims)
-		if account.AccountNumber != int64(claims["account_number"].(float64)) {
+		accountNumber, ok := claims["account_number"].(float64)
+		if !ok {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
 			return
 		}
+		account.AccountNumber = int64(accountNumber)
 		if err != nil {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
 			return

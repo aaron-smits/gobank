@@ -1,21 +1,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"flag"
 )
 
-func seedAccount(store Storage, firstName, lastName, password string) *Account{
+func seedAccount(store Storage, firstName, lastName, password string) *Account {
 	account, err := NewAccount(firstName, lastName, password)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	if err := store.CreateAccount(account); err != nil {
 		log.Fatal(err)
 	}
 
+	fmt.Println("NEW ACCOUNT CREATED", account.AccountNumber)
 	return account
 }
 

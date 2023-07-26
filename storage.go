@@ -42,6 +42,7 @@ func (s *PostgresStore) CreateAccountTable() error {
 		first_name varchar(50) NOT NULL,
 		last_name varchar(50) NOT NULL,
 		account_number BIGINT NOT NULL,
+		encrypted_password varchar(100) NOT NULL,
 		balance BIGINT NOT NULL,
 		created_at timestamp
 		)`
@@ -57,16 +58,18 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 			first_name,
 			last_name,
 			account_number,
+			encrypted_password,
 			balance,
 			created_at
 			) VALUES (
-				$1, $2, $3, $4, $5
-				)`
+				$1, $2, $3, $4, $5, $6
+			)`
 	resp, err := s.db.Query(
 		query,
 		acc.FirstName,
 		acc.LastName,
 		acc.AccountNumber,
+		acc.EncryptedPassword,
 		acc.Balance,
 		acc.CreatedAt,
 	)
@@ -100,6 +103,7 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 		&account.FirstName,
 		&account.LastName,
 		&account.AccountNumber,
+		&account.EncryptedPassword,
 		&account.Balance,
 		&account.CreatedAt,
 	)
@@ -110,7 +114,7 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 	return account, nil
 }
 
-func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error){
+func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
 	rows, err := s.db.Query("SELECT * FROM accounts WHERE account_number=$1", number)
 	if err != nil {
 		return nil, err
@@ -123,13 +127,14 @@ func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error){
 			&account.FirstName,
 			&account.LastName,
 			&account.AccountNumber,
+			&account.EncryptedPassword,
 			&account.Balance,
 			&account.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return account, nil
 	}
 
@@ -150,6 +155,7 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 			&account.FirstName,
 			&account.LastName,
 			&account.AccountNumber,
+			&account.EncryptedPassword,
 			&account.Balance,
 			&account.CreatedAt,
 		)
