@@ -27,9 +27,25 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/account", withJWTAuth(makeHTTPHandleFunc(s.handleAccount), s.store))
 	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleGetAccountByID), s.store))
 	router.HandleFunc("/transfer", withJWTAuth(makeHTTPHandleFunc(s.handleTransfer), s.store))
-
+	router.HandleFunc("/login", makeHTTPHandleFunc(s.handleLogin))
 	log.Println("JSON API server running on", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
+}
+
+func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != "POST" {
+		return fmt.Errorf("unsupported method %s", r.Method)
+	}
+	if r.Method == "POST" {
+		return s.handleCreateAccount(w, r)
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, req)
 }
 
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
@@ -43,39 +59,13 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
-func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
-	if r.Method == "GET" {
-		accounts, err := s.store.GetAccounts()
-		if err != nil {
-			return err
-		}
-
-		return WriteJSON(w, http.StatusOK, accounts)
+func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+	accounts, err := s.store.GetAccounts()
+	if err != nil {
+		return err
 	}
-	if r.Method == "POST" {
-		loginReq := new(LoginRequest)
-        if err := json.NewDecoder(r.Body).Decode(loginReq); err != nil {
-            return err
-        }
 
-        account, err := s.store.GetAccountByEmail(loginReq.Email)
-        if err != nil {
-            return err
-        }
-
-        if account == nil || !account.CheckPassword(loginReq.Password) {
-            return fmt.Errorf("invalid email or password")
-        }
-
-        tokenString, err := makeJWTToken(account)
-        if err != nil {
-            return err
-        }
-
-        return WriteJSON(w, http.StatusOK, map[string]string{"token": tokenString})
-    }
-
-    return fmt.Errorf("unsupported method %s", r.Method)
+	return WriteJSON(w, http.StatusOK, accounts)
 }
 
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
@@ -101,11 +91,14 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	createAccountReq := new(CreateAccountRequest)
-	if err := json.NewDecoder(r.Body).Decode(createAccountReq); err != nil {
+	req := new(CreateAccountRequest)
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
 	}
-	account := NewAccount(createAccountReq.FirstName, createAccountReq.LastName)
+	account, err := NewAccount(req.FirstName, req.LastName, req.Password)
+	if err != nil {
+		return err
+	}
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
