@@ -10,11 +10,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Reprsents the JSON API server
 type APIServer struct {
 	listenAddr string
 	store      Storage
 }
 
+// NewAPIServer creates a new JSON API server
 func NewAPIServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
@@ -22,16 +24,29 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 	}
 }
 
+// Run starts the JSON API server and listens for requests
 func (s *APIServer) Run() {
+	// Create a new chi router and register the routes
 	router := chi.NewRouter()
-	router.HandleFunc("/account", withJWTAuth(makeHTTPHandleFunc(s.handleAccount), s.store))
-	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.handleGetAccountByID), s.store))
-	router.HandleFunc("/transfer", withJWTAuth(makeHTTPHandleFunc(s.handleTransfer), s.store))
-	router.HandleFunc("/login", makeHTTPHandleFunc(s.handleLogin))
+	// The account endpoint is for creating and getting accounts
+	router.HandleFunc("/account", withJWTAuth(MakeHTTPHandlerFunc(s.handleAccount), s.store))
+	// This endpoint is for getting and deleting accounts by ID
+	router.HandleFunc("/account/{id}", withJWTAuth(MakeHTTPHandlerFunc(s.handleGetAccountByID), s.store))
+	// This endpoint is for transferring money between accounts
+	router.HandleFunc("/transfer", withJWTAuth(MakeHTTPHandlerFunc(s.handleTransfer), s.store))
+	// This endpoint is for logging in and receiving a JWT token
+	router.HandleFunc("/login", MakeHTTPHandlerFunc(s.handleLogin))
 	log.Println("JSON API server running on", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
 }
 
+// Log in and receive a JWT token
+// Post to /login your account number and password
+//
+//	{
+//		"account_number": 123456,
+//		"password": "password"
+//	}
 func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != "POST" {
 		return fmt.Errorf("unsupported method %s", r.Method)
@@ -41,6 +56,8 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return err
 	}
+
+
 
 	account, err := s.store.GetAccountByNumber(int(req.AccountNumber))
 	if err != nil {
@@ -61,6 +78,16 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSON(w, http.StatusOK, resp)
 }
 
+// Create a new account or get all accounts
+// Post to /account to create a new account
+//
+//	{
+//		"first_name": "John",
+//		"last_name": "Doe",
+//		"password": "password"
+//	}
+//
+// Get /account to get all accounts
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
 		return s.handleGetAccount(w, r)
@@ -70,15 +97,6 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	return fmt.Errorf("unsupported method %s", r.Method)
-}
-
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	accounts, err := s.store.GetAccounts()
-	if err != nil {
-		return err
-	}
-
-	return WriteJSON(w, http.StatusOK, accounts)
 }
 
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
@@ -103,6 +121,27 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
+// Get all accounts or get an account by ID
+// This function is used in the handleAccount function to get all accounts when the endpoint
+// is hit with the GET method
+func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+	accounts, err := s.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, accounts)
+}
+
+// Create a new account
+// Used in the handleAccount function to create a new account when the endpoint is hit with the POST method
+// Example request body:
+//
+//	{
+//		"first_name": "John",
+//		"last_name": "Doe",
+//		"password": "password"
+//	}
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
@@ -115,12 +154,6 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
-	tokenString, err := makeJWTToken(account)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("tokenString", tokenString)
 
 	return WriteJSON(w, http.StatusOK, account)
 }
@@ -148,34 +181,4 @@ func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error
 	defer r.Body.Close()
 
 	return WriteJSON(w, http.StatusOK, transferReq)
-}
-
-func WriteJSON(w http.ResponseWriter, status int, v any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
-}
-
-type apiFunc func(w http.ResponseWriter, r *http.Request) error
-
-type ApiError struct {
-	Error string `json:"error"`
-}
-
-func makeHTTPHandleFunc(fn apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := fn(w, r); err != nil {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
-		}
-	}
-}
-
-func getID(r *http.Request) (int, error) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return 0, fmt.Errorf("invalid id %s", idStr)
-	}
-
-	return id, nil
 }

@@ -7,6 +7,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Storage is an interface for storing and retrieving accounts
+// All of these methods are required to be implemented
 type Storage interface {
 	CreateAccount(*Account) error
 	DeleteAccount(int) error
@@ -16,12 +18,16 @@ type Storage interface {
 	GetAccountByNumber(int) (*Account, error)
 }
 
+// PostgresStore is an implementation of the Storage interface
+// The only thing in this struct is a pointer to a sql.DB
+// This is for connecting to the database
 type PostgresStore struct {
 	db *sql.DB
 }
 
+// NewPostgresStore creates a new PostgresStore and connects to the database
 func NewPostgresStore() (*PostgresStore, error) {
-	connStr := "user=postgres dbname=postgres password=mysecretpassword sslmode=disable"
+	connStr := "user=postgres dbname=postgres password=mysecretpassword1234 sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
@@ -36,6 +42,8 @@ func NewPostgresStore() (*PostgresStore, error) {
 	}, nil
 }
 
+// CreateAccountTable creates the accounts table if it doesn't exist\
+// This is called in main.go when the server starts
 func (s *PostgresStore) CreateAccountTable() error {
 	query := `CREATE TABLE if not exists accounts(
 		id SERIAL PRIMARY KEY,
@@ -53,6 +61,8 @@ func (s *PostgresStore) CreateAccountTable() error {
 	return err
 }
 
+// CreateAccount creates a new account in the database
+// Takes a pointer to an account
 func (s *PostgresStore) CreateAccount(acc *Account) error {
 	query := `INSERT INTO accounts (
 			first_name,
@@ -82,6 +92,10 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 	return nil
 }
 
+// DeleteAccount deletes an account from the database
+// In the future, this should probably be a soft delete
+// I should create a new column called deleted_at and set it to the current time
+// Or I could create a new table called deleted_accounts and move the account there
 func (s *PostgresStore) DeleteAccount(id int) error {
 	_, err := s.db.Query("DELETE FROM accounts WHERE id=$1", id)
 	if err != nil {
@@ -90,10 +104,17 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 	return nil
 }
 
+// UpdateAccount updates an account in the database
+// This is not implemented yet
+// Ideas for implementation:
+// parameterize this function so that it can take a map of fields to update
+// or take a pointer to an account and update all of the fields
 func (s *PostgresStore) UpdateAccount(*Account) error {
 	return nil
 }
 
+// GetAccountByID gets an account from the database by ID
+// This is used in the handleAccountByID function in api.go
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 	account := new(Account)
 	query := `SELECT * FROM accounts WHERE id=$1`
@@ -114,6 +135,8 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 	return account, nil
 }
 
+// GetAccountByNumber gets an account from the database by account number
+// This is used in the handleAccount function in api.go
 func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
 	rows, err := s.db.Query("SELECT * FROM accounts WHERE account_number=$1", number)
 	if err != nil {
@@ -141,6 +164,7 @@ func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
 	return nil, fmt.Errorf("account not found")
 }
 
+// This gets all of the accounts from the database
 func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 	rows, err := s.db.Query("SELECT * FROM accounts")
 	if err != nil {

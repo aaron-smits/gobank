@@ -7,7 +7,13 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// ComparePassword compares a plaintext password to the encrypted password
+func (a *Account) ComparePassword(pw string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
+}
 
 func makeJWTToken(account *Account) (string, error) {
 	claims := jwt.MapClaims{
@@ -47,7 +53,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized"})
 			return
 		}
-		userID, err := getID(r)
+		userID, err := GetID(r)
 		if err != nil {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
 			return
