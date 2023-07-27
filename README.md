@@ -11,5 +11,5 @@ On the to do list:
 - [ ] Transfer endpoint
 - [ ] Logout endpoint
 - [ ] Method to invalidate JWT tokens
-- [ ] Create a basic UI using Go html templates or HTMX
+- [ ] Create a client UI using Go html templates or HTMX
 - [ ] Deploy a demo version
