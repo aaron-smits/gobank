@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: test_postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres-db
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - '5432:5432'
+  web:
+    build: 
+      context: .
+    ports:
+      - '5555:5555'
+    volumes:
+      - .:/usr/src/app
+    command: ./bin/gobank --seed
+    depends_on:
+      - db
+
+volumes:
+  postgres:

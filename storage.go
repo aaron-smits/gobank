@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -27,10 +29,13 @@ type PostgresStore struct {
 
 // NewPostgresStore creates a new PostgresStore and connects to the database
 func NewPostgresStore() (*PostgresStore, error) {
-	connStr := "user=postgres dbname=postgres password=mysecretpassword1234 sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	connectionString := os.Getenv("POSTGRES_URL")
+	if connectionString == "" {
+		log.Fatal("POSTGRES_URL environment variable not set")
+	}
+	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
-		return nil, err
+		log.Fatalf("failed to connect to the database: %v", err)
 	}
 
 	if err := db.Ping(); err != nil {
