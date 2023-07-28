@@ -2,7 +2,7 @@
 
 A JSON API for a bank written in Go. 
 
-Utilizes mostly the standard library.
+I tried to mostly use the Go standard library.
 
 In place of the old go-to gorilla/mux, I use the lightweight [chi router](https://github.com/go-chi/chi).
 
