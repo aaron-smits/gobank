@@ -31,7 +31,6 @@ func makeJWTToken(account *Account) (string, error) {
 
 // Helper for validating JWT token
 // Parses the token and checks if it is valid based on the secret
-// Secret is read from the environment variable JWT_SECRET
 func validateJWTToken(token string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
 
@@ -60,7 +59,7 @@ func getIDFromClaims(token *jwt.Token) (int, error) {
 // 2. Checks if the user is an admin if the endpoint is admin-only
 // 3. Checks if the user is accessing their own account by ID
 // If any of the above checks fail, the middleware returns an error
-func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.HandlerFunc {
+func withJWTAuth(adminOnly bool, handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("call to JWT middleware")
 
@@ -86,7 +85,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.H
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting account"})
 			return
 		}
-
+		
 		// Check if the user is an admin if the endpoint is admin-only
 		if adminOnly && !account.IsAdmin {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "insufficient permissions"})

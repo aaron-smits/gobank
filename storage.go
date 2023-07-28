@@ -14,12 +14,14 @@ import (
 type Storage interface {
 	CreateAccount(*Account) error
 	DeleteAccount(int) error
-	UpdateAccount(*Account) error
+	UpdateAccountByID(int, *Account) (*Account, error)
 	GetAccounts() ([]*Account, error)
 	GetAccountByID(int) (*Account, error)
 	GetAccountByNumber(int) (*Account, error)
 	GetAdminStatus(int) (bool, error)
 	MakeTransfer(int, int, int) (*Account, error)
+	AddBalanceTx(*sql.Tx, int, int) error
+	SubtractBalanceTx(*sql.Tx, int, int) error
 }
 
 // PostgresStore is an implementation of the Storage interface
@@ -107,10 +109,19 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 // I should create a new column called deleted_at and set it to the current time
 // Or I could create a new table called deleted_accounts and move the account there
 func (s *PostgresStore) DeleteAccount(id int) error {
-	_, err := s.db.Query("DELETE FROM accounts WHERE id=$1", id)
+	// Check that the account exists
+	_, err := s.GetAccountByID(id)
 	if err != nil {
 		return err
 	}
+	
+	// Delete the account
+	query := `DELETE FROM accounts WHERE id=$1`
+	_, err = s.db.Query(query, id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -119,8 +130,41 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 // Ideas for implementation:
 // parameterize this function so that it can take a map of fields to update
 // or take a pointer to an account and update all of the fields
-func (s *PostgresStore) UpdateAccount(*Account) error {
-	return nil
+func (s *PostgresStore) UpdateAccountByID(id int, accountDetails *Account) (*Account, error) {
+	// Make sure the account exists
+	query := `
+		UPDATE accounts
+		SET 
+		first_name=$1, 
+		last_name=$2, 
+		account_number=$3,
+		is_admin=$4
+		WHERE id=$5`
+	//Check to make sure accountDetails is not nil
+	if accountDetails == nil {
+		return nil, fmt.Errorf("account details cannot be nil")
+	}
+	
+	_, err := s.db.Query(
+		query,
+		accountDetails.FirstName,
+		accountDetails.LastName,
+		accountDetails.AccountNumber,
+		accountDetails.IsAdmin,
+		id,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the updated account from the database
+	account, err := s.GetAccountByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
 // GetAccountByID gets an account from the database by ID

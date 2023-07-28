@@ -9,9 +9,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// this type represents a function that takes a request and returns an error
-type apiFunc func(w http.ResponseWriter, r *http.Request) error
-
 // this function is for the router to be able take requests and return responses
 func MakeHTTPHandlerFunc(fn apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -28,12 +28,12 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	// Create a new chi router and register the routes
 	router := chi.NewRouter()
-	// The account endpoint is for creating and getting accounts
-	router.HandleFunc("/account", withJWTAuth(MakeHTTPHandlerFunc(s.handleAccount), s.store, true))
+	// The account endpoint is for creating and getting accounts. Admins only
+	router.HandleFunc("/accounts", withJWTAuth(true, MakeHTTPHandlerFunc(s.handleAccounts), s.store))
 	// This endpoint is for getting and deleting accounts by ID
-	router.HandleFunc("/account/{id}", withJWTAuth(MakeHTTPHandlerFunc(s.handleGetAccountByID), s.store, false))
-	// This endpoint is for transferring money between accounts
-	router.HandleFunc("/transfer", withJWTAuth(MakeHTTPHandlerFunc(s.handleTransfer), s.store, false))
+	router.HandleFunc("/account/{id}", withJWTAuth(false, MakeHTTPHandlerFunc(s.handleGetAccountByID), s.store))
+	// This endpoint is for transferring money between accounts. Admins only.
+	router.HandleFunc("/transfer", withJWTAuth(true, MakeHTTPHandlerFunc(s.handleTransfer), s.store))
 	// This endpoint is for logging in and receiving a JWT token
 	router.HandleFunc("/login", MakeHTTPHandlerFunc(s.handleLogin))
 	log.Println("JSON API server running on", s.listenAddr)
@@ -87,14 +87,14 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 //	}
 //
 // Get /account to get all accounts
-func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) handleAccounts(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
-		return s.handleGetAccount(w, r)
+		return s.handleGetAccounts(w, r)
 	}
 	if r.Method == "POST" {
 		return s.handleCreateAccount(w, r)
 	}
-
+	
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
@@ -117,13 +117,17 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 		return s.handleDeleteAccount(w, r)
 	}
 
+	if r.Method == "PUT" {
+		return s.handleUpdateAccount(w, r)
+	}
+
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
 // Get all accounts or get an account by ID
 // This function is used in the handleAccount function to get all accounts when the endpoint
 // is hit with the GET method
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) handleGetAccounts(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.store.GetAccounts()
 	if err != nil {
 		return fmt.Errorf("error getting accounts: %v", err)
@@ -178,6 +182,46 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	return WriteJSON(w, http.StatusOK, map[string]int{"deleted": id})
 }
 
+// Shape of the request body for updating an account
+//{
+//	"first_name": "John",
+//	"last_name": "Doe",
+//	"account_number": 123456,
+//	"is_admin": false
+//}
+func (s *APIServer) handleUpdateAccount(w http.ResponseWriter, r *http.Request) error {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid id %s", idStr)
+	}
+
+	req := new(UpdateAccountRequest)
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return fmt.Errorf("invalid request body")
+	}
+	acc, err := s.store.GetAccountByID(id)
+	if err != nil {
+		return fmt.Errorf("error getting account: %v", err)
+	}
+
+	updatedAccount := &Account{
+		ID:                acc.ID,
+		FirstName:         req.FirstName,
+		LastName:          req.LastName,
+		AccountNumber:     req.AccountNumber,
+		IsAdmin: 		   req.IsAdmin,
+	}
+
+	_, err = s.store.UpdateAccountByID(id, updatedAccount)
+	if err != nil {
+		return fmt.Errorf("error updating account: %v", err)
+	}
+
+	return WriteJSON(w, http.StatusOK, updatedAccount)
+
+
+}
 
 //Request body sample
 //{

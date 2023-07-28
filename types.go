@@ -1,7 +1,14 @@
 package main
 
-import "time"
+import (
+	"time"
+	"net/http"
+)
 
+
+
+// this type represents a function that takes a request and returns an error
+type apiFunc func(w http.ResponseWriter, r *http.Request) error
 // Api error type for server error responses
 type ApiError struct {
 	Error string `json:"error"`
@@ -41,5 +48,12 @@ type CreateAccountRequest struct {
 	LastName  string `json:"last_name"`
 	Password  string `json:"password"`
 	Balance   int64  `json:"balance"`
+	IsAdmin   bool   `json:"is_admin"`
+}
+
+type UpdateAccountRequest struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	AccountNumber int64 `json:"account_number"`
 	IsAdmin   bool   `json:"is_admin"`
 }
