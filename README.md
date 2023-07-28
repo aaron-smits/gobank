@@ -14,6 +14,7 @@ On the to do list:
   - [X] Implement seeding method for balance
   - [X] Implement transfer endpoint
 - [x] Error handling enhancements
+- [ ] Add ability for admins to update accounts 
 - [ ] Logout endpoint
 - [ ] Method to invalidate JWT tokens
 - [ ] Transaction history table
