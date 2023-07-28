@@ -15,6 +15,8 @@ func (a *Account) ComparePassword(pw string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(a.EncryptedPassword), []byte(pw)) == nil
 }
 
+// Helper for making JWT token
+// Creates a JWT token with the account number and user ID as claims
 func makeJWTToken(account *Account) (string, error) {
 	claims := jwt.MapClaims{
 		"account_number": account.AccountNumber,
@@ -27,6 +29,9 @@ func makeJWTToken(account *Account) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// Helper for validating JWT token
+// Parses the token and checks if it is valid based on the secret
+// Secret is read from the environment variable JWT_SECRET
 func validateJWTToken(token string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
 
@@ -40,7 +45,7 @@ func validateJWTToken(token string) (*jwt.Token, error) {
 	})
 }
 
-// GetIDFromClaims is a helper function for getting the ID from JWT token claims
+// Helper for getting user ID from JWT token claims
 func getIDFromClaims(token *jwt.Token) (int, error) {
 	claims := token.Claims.(jwt.MapClaims)
 	id, ok := claims["user_id"].(float64)
@@ -50,15 +55,8 @@ func getIDFromClaims(token *jwt.Token) (int, error) {
 	return int(id), nil
 }
 
-func getAccountNumberFromClaims(token *jwt.Token) (int64, error) {
-	claims := token.Claims.(jwt.MapClaims)
-	accountNumber, ok := claims["account_number"].(float64)
-	if !ok {
-		return 0, fmt.Errorf("could not get account number from claims")
-	}
-	return int64(accountNumber), nil
-}
-
+// Middleware for JWT authentication
+// 1. Validates the token
 func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("call to JWT middleware")
@@ -66,7 +64,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.H
 		tokenStr := r.Header.Get("x-jwt-token")
 		token, err := validateJWTToken(tokenStr)
 		if err != nil {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "error validating token"})
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error validating token"})
 			return
 		}
 		if !token.Valid {
@@ -76,35 +74,27 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.H
 
 		userID, err := getIDFromClaims(token)
 		if err != nil {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token. Could not get user ID"})
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting user ID from token"})
 			return
 		}
 		account, err := s.GetAccountByID(userID)
 		if err != nil {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting account"})
 			return
 		}
 
 		// Check if the user is an admin if the endpoint is admin-only
 		if adminOnly && !account.IsAdmin {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized"})
+			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "insufficient permissions"})
 			return
 		}
 
 		// Check if the user is accessing their own account by ID
 		if !account.IsAdmin && r.URL.Path != fmt.Sprintf("/account/%d", userID) {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized"})
+			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "insufficient permissions"})
 			return
 		}
 
-		account.AccountNumber, err = getAccountNumberFromClaims(token)
-
-		if err != nil {
-			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "unauthorized token"})
-			return
-		}
-		fmt.Printf("account number: %d\n", account.AccountNumber)
-		fmt.Printf("user id: %d\n", account.ID)
 		handlerFunc(w, r)
 	}
 }
