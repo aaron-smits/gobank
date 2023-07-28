@@ -2,13 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,26 +22,18 @@ func MakeHTTPHandlerFunc(fn apiFunc) http.HandlerFunc {
 }
 
 // This is a helper function for writing JSON responses
+// It takes a status code and a value and writes the JSON response
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(v)
 }
 
-// GetID is a helper function for getting the ID from the URL
-func GetID(r *http.Request) (int, error) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return 0, fmt.Errorf("invalid id %s", idStr)
-	}
-
-	return id, nil
-}
-
 // NewAccount creates a new account and hashes the password
 // This function is used in the seedAccounts function in main.go
-func NewAccount(firstName, lastName, password string) (*Account, error) {
+// Currently the account number is a random number between 0 and 1,000,000
+// In the future we will want to make sure that the account number is unique
+func NewAccount(firstName, lastName, password string, isAdmin bool) (*Account, error) {
 	encpw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -57,6 +46,7 @@ func NewAccount(firstName, lastName, password string) (*Account, error) {
 		AccountNumber:     int64(rand.Intn(1000000)),
 		Balance:           0,
 		CreatedAt:         time.Now().UTC(),
+		IsAdmin:           isAdmin,
 	}, nil
 
 }

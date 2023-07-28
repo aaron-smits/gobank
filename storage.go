@@ -18,6 +18,7 @@ type Storage interface {
 	GetAccounts() ([]*Account, error)
 	GetAccountByID(int) (*Account, error)
 	GetAccountByNumber(int) (*Account, error)
+	GetAdminStatus(int) (bool, error)
 }
 
 // PostgresStore is an implementation of the Storage interface
@@ -57,7 +58,8 @@ func (s *PostgresStore) CreateAccountTable() error {
 		account_number BIGINT NOT NULL,
 		encrypted_password varchar(100) NOT NULL,
 		balance BIGINT NOT NULL,
-		created_at timestamp
+		created_at timestamp,
+		is_admin boolean DEFAULT false
 		)`
 	_, err := s.db.Exec(query)
 	if err == nil {
@@ -75,9 +77,10 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 			account_number,
 			encrypted_password,
 			balance,
-			created_at
+			created_at,
+			is_admin
 			) VALUES (
-				$1, $2, $3, $4, $5, $6
+				$1, $2, $3, $4, $5, $6, $7
 			)`
 	resp, err := s.db.Query(
 		query,
@@ -87,6 +90,7 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 		acc.EncryptedPassword,
 		acc.Balance,
 		acc.CreatedAt,
+		acc.IsAdmin,
 	)
 
 	if err != nil {
@@ -132,6 +136,7 @@ func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 		&account.EncryptedPassword,
 		&account.Balance,
 		&account.CreatedAt,
+		&account.IsAdmin,
 	)
 	if err != nil {
 		return nil, err
@@ -158,6 +163,7 @@ func (s *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
 			&account.EncryptedPassword,
 			&account.Balance,
 			&account.CreatedAt,
+			&account.IsAdmin,
 		)
 		if err != nil {
 			return nil, err
@@ -187,6 +193,7 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 			&account.EncryptedPassword,
 			&account.Balance,
 			&account.CreatedAt,
+			&account.IsAdmin,
 		)
 		if err != nil {
 			return nil, err
@@ -196,4 +203,17 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+// GetAdminStatus gets the admin status of an account
+// This is used in the withAdminAuth middleware in auth.go
+func (s *PostgresStore) GetAdminStatus(id int) (bool, error) {
+	var isAdmin bool
+	row := s.db.QueryRow("SELECT is_admin FROM accounts WHERE id=$1", id)
+	err := row.Scan(&isAdmin)
+	if err != nil {
+		return false, err
+	}
+
+	return isAdmin, nil
 }

@@ -22,6 +22,7 @@ type Account struct {
 	AccountNumber     int64     `json:"account_number"`
 	Balance           int64     `json:"balance"`
 	CreatedAt         time.Time `json:"created_at"`
+	IsAdmin           bool      `json:"is_admin"`
 }
 
 type LoginRequest struct {
@@ -38,4 +39,5 @@ type CreateAccountRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Password  string `json:"password"`
+	IsAdmin   bool   `json:"is_admin"`
 }

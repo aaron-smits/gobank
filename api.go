@@ -29,11 +29,11 @@ func (s *APIServer) Run() {
 	// Create a new chi router and register the routes
 	router := chi.NewRouter()
 	// The account endpoint is for creating and getting accounts
-	router.HandleFunc("/account", withJWTAuth(MakeHTTPHandlerFunc(s.handleAccount), s.store))
+	router.HandleFunc("/account", withJWTAuth(MakeHTTPHandlerFunc(s.handleAccount), s.store, true))
 	// This endpoint is for getting and deleting accounts by ID
-	router.HandleFunc("/account/{id}", withJWTAuth(MakeHTTPHandlerFunc(s.handleGetAccountByID), s.store))
+	router.HandleFunc("/account/{id}", withJWTAuth(MakeHTTPHandlerFunc(s.handleGetAccountByID), s.store, false))
 	// This endpoint is for transferring money between accounts
-	router.HandleFunc("/transfer", withJWTAuth(MakeHTTPHandlerFunc(s.handleTransfer), s.store))
+	router.HandleFunc("/transfer", withJWTAuth(MakeHTTPHandlerFunc(s.handleTransfer), s.store, false))
 	// This endpoint is for logging in and receiving a JWT token
 	router.HandleFunc("/login", MakeHTTPHandlerFunc(s.handleLogin))
 	log.Println("JSON API server running on", s.listenAddr)
@@ -56,8 +56,6 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return err
 	}
-
-
 
 	account, err := s.store.GetAccountByNumber(int(req.AccountNumber))
 	if err != nil {
@@ -85,6 +83,7 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 //		"first_name": "John",
 //		"last_name": "Doe",
 //		"password": "password"
+//		"is_admin": false
 //	}
 //
 // Get /account to get all accounts
@@ -141,13 +140,14 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 //		"first_name": "John",
 //		"last_name": "Doe",
 //		"password": "password"
+//		"is_admin": false
 //	}
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		return err
 	}
-	account, err := NewAccount(req.FirstName, req.LastName, req.Password)
+	account, err := NewAccount(req.FirstName, req.LastName, req.Password, false)
 	if err != nil {
 		return err
 	}
