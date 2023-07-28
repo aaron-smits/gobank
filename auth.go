@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"strings"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -22,6 +23,7 @@ func makeJWTToken(account *Account) (string, error) {
 		"account_number": account.AccountNumber,
 		"user_id":        account.ID,
 		"exp":            time.Now().Add(time.Hour * 24).Unix(),
+		"token_type":     "Bearer",
 	}
 	secret := os.Getenv("JWT_SECRET")
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -63,7 +65,13 @@ func withJWTAuth(adminOnly bool, handlerFunc http.HandlerFunc, s Storage) http.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("call to JWT middleware")
 
-		tokenStr := r.Header.Get("x-jwt-token")
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "no token provided"})
+			return
+		}
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
 		token, err := validateJWTToken(tokenStr)
 		if err != nil {
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error validating token"})
