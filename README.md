@@ -49,6 +49,7 @@ Future Tasks
 - [ ] Create a client UI using Go html templates or HTMX
 
 ## Usage
+Use the template env file to pass in all the required fields for your database
 
 To run the server, run the following command:
 
