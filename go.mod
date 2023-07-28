@@ -1,4 +1,4 @@
-module github.com/northern-lite/gobank
+module github.com/aaron-smits/gobank
 
 go 1.20
 
