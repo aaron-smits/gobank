@@ -10,6 +10,7 @@ type ApiError struct {
 // TransferRequest is the request body for the transfer endpoint
 type TransferRequest struct {
 	ToAccountID int `json:"to_account_id"`
+	FromAccountID int `json:"from_account_id"`
 	Amount      int `json:"amount"`
 }
 
@@ -39,5 +40,6 @@ type CreateAccountRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Password  string `json:"password"`
+	Balance   int64  `json:"balance"`
 	IsAdmin   bool   `json:"is_admin"`
 }

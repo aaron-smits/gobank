@@ -33,10 +33,14 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 // This function is used in the seedAccounts function in main.go
 // Currently the account number is a random number between 0 and 1,000,000
 // In the future we will want to make sure that the account number is unique
-func NewAccount(firstName, lastName, password string, isAdmin bool) (*Account, error) {
+func NewAccount(firstName, lastName, password string, isAdmin bool,  balance ...int64) (*Account, error) {
 	encpw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
+	}
+	var bal int64
+	if len(balance) > 0 {
+		bal = balance[0]
 	}
 
 	return &Account{
@@ -44,7 +48,7 @@ func NewAccount(firstName, lastName, password string, isAdmin bool) (*Account, e
 		LastName:          lastName,
 		EncryptedPassword: string(encpw),
 		AccountNumber:     int64(rand.Intn(1000000)),
-		Balance:           0,
+		Balance:           bal,
 		CreatedAt:         time.Now().UTC(),
 		IsAdmin:           isAdmin,
 	}, nil

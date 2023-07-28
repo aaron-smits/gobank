@@ -54,12 +54,12 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return err
+		return fmt.Errorf("invalid request body")
 	}
 
 	account, err := s.store.GetAccountByNumber(int(req.AccountNumber))
 	if err != nil {
-		return err
+		return fmt.Errorf("unauthorized")
 	}
 	if !account.ComparePassword(req.Password) {
 		return fmt.Errorf("unauthorized")
@@ -126,7 +126,7 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.store.GetAccounts()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting accounts: %v", err)
 	}
 
 	return WriteJSON(w, http.StatusOK, accounts)
@@ -145,14 +145,20 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	req := new(CreateAccountRequest)
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-		return err
+		return fmt.Errorf("invalid request body")
 	}
-	account, err := NewAccount(req.FirstName, req.LastName, req.Password, false)
+	account, err := NewAccount(
+		req.FirstName, 
+		req.LastName, 
+		req.Password,  
+		false, 
+		req.Balance,
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating account: %v", err)
 	}
 	if err := s.store.CreateAccount(account); err != nil {
-		return err
+		return fmt.Errorf("error creating account: %v", err)
 	}
 
 	return WriteJSON(w, http.StatusOK, account)
@@ -166,19 +172,36 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := s.store.DeleteAccount(id); err != nil {
-		return err
+		return fmt.Errorf("error deleting account: %v", err)
 	}
 
 	return WriteJSON(w, http.StatusOK, map[string]int{"deleted": id})
 }
 
+
+//Request body sample
+//{
+//	"to_account_id": 123456,
+//	"from_account_id": 123456,
+//	"amount": 100
+//}
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
 	transferReq := new(TransferRequest)
 	if err := json.NewDecoder(r.Body).Decode(transferReq); err != nil {
-		return err
+		return fmt.Errorf("invalid request body")
 	}
 
-	defer r.Body.Close()
 
-	return WriteJSON(w, http.StatusOK, transferReq)
+	acc, err := s.store.MakeTransfer(
+		transferReq.ToAccountID, 
+		transferReq.FromAccountID, 
+		transferReq.Amount,
+	)
+	
+	if err != nil {
+		return fmt.Errorf("error making transfer: %v", err)
+	}
+
+
+	return WriteJSON(w, http.StatusOK, fmt.Sprintf("Transfer successful. New balance: %d", acc.Balance))
 }

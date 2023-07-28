@@ -19,6 +19,7 @@ type Storage interface {
 	GetAccountByID(int) (*Account, error)
 	GetAccountByNumber(int) (*Account, error)
 	GetAdminStatus(int) (bool, error)
+	MakeTransfer(int, int, int) (*Account, error)
 }
 
 // PostgresStore is an implementation of the Storage interface
@@ -216,4 +217,100 @@ func (s *PostgresStore) GetAdminStatus(id int) (bool, error) {
 	}
 
 	return isAdmin, nil
+}
+
+func (s *PostgresStore) GetBalanceTx(tx *sql.Tx, id int) (int64, error) {
+    var balance int64
+    row := tx.QueryRow("SELECT balance FROM accounts WHERE id=$1", id)
+    err := row.Scan(&balance)
+    if err != nil {
+        return 0, err
+    }
+
+    return balance, nil
+}
+
+func (s *PostgresStore) AddBalanceTx(tx *sql.Tx, id int, amount int) error {
+    balance, err := s.GetBalanceTx(tx, id)
+    if err != nil {
+        return err
+    }
+
+    balance += int64(amount)
+    _, err = tx.Exec("UPDATE accounts SET balance=$1 WHERE id=$2", balance, id)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (s *PostgresStore) SubtractBalanceTx(tx *sql.Tx, id int, amount int) error {
+    balance, err := s.GetBalanceTx(tx, id)
+    if err != nil {
+        return err
+    }
+
+    balance -= int64(amount)
+    _, err = tx.Exec("UPDATE accounts SET balance=$1 WHERE id=$2", balance, id)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+// MakeTransfer makes a transfer from one account to another
+// checks the balance of the from account and subtracts the amount from their balance
+// then adds the amount to the to account
+// This is used in the handleTransfer function in api.go
+func (s *PostgresStore) MakeTransfer(toAcc, fromAcc, amount int) (*Account, error) {
+	// Begin a transaction
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the balance of the from account
+	fromBalance, err := s.GetBalanceTx(tx, fromAcc)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Check if the from account has enough money
+	if fromBalance < int64(amount) {
+		tx.Rollback()
+		return nil, fmt.Errorf("insufficient funds")
+	}
+
+	// Subtract the amount from the from account
+	err = s.SubtractBalanceTx(tx, fromAcc, amount)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+
+	// Add the amount to the to account
+	err = s.AddBalanceTx(tx, toAcc, amount)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	
+	// Get the updated account from the database
+	account, err := s.GetAccountByID(fromAcc)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }

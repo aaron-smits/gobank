@@ -7,12 +7,16 @@ I also referenced [this youtube video](https://www.youtube.com/watch?v=p08c0-99S
 My main goal with this project is the build a basic JSON API with Go to understand how developing web backends in Go works and the idioms Go developers use.
 
 On the to do list:
-- [ ] Testing (unit, integration, end-to-end)
-- [ ] Error handling enhancements
-- [ ] Transfer endpoint
+- [x] Transfer endpoint
+  - [x] Implement storage method for transfer
+  - [X] Implement add balance method
+  - [X] Implement subtract balance method
+  - [X] Implement seeding method for balance
+  - [X] Implement transfer endpoint
+- [x] Error handling enhancements
 - [ ] Logout endpoint
-- [ ] Balance checking endpoint
+- [ ] Method to invalidate JWT tokens
 - [ ] Transaction history table
 - [ ] Transaction history endpoint
-- [ ] Method to invalidate JWT tokens
+- [ ] Testing (unit, integration, end-to-end)
 - [ ] Create a client UI using Go html templates or HTMX
