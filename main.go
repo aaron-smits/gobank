@@ -18,7 +18,8 @@ func seedAccount(s Storage, firstName, lastName, password string, isAdmin bool, 
 		log.Fatal(err)
 	}
 
-	if err := s.CreateAccount(account); err != nil {
+	acc, err := s.CreateAccount(account); 
+	if err != nil {
 		log.Fatal(err)
 	}
 	if !isAdmin {
@@ -27,7 +28,7 @@ func seedAccount(s Storage, firstName, lastName, password string, isAdmin bool, 
 	if isAdmin {
 		fmt.Println("NEW ADMIN ACCOUNT SEEDED:", account.AccountNumber)
 	}
-	return account
+	return acc
 }
 
 func seedAccounts(s Storage) {

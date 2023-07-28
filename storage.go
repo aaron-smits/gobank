@@ -12,7 +12,7 @@ import (
 // Storage is an interface for storing and retrieving accounts
 // All of these methods are required to be implemented
 type Storage interface {
-	CreateAccount(*Account) error
+	CreateAccount(*Account) (*Account, error)
 	DeleteAccount(int) error
 	UpdateAccountByID(int, *Account) (*Account, error)
 	GetAccounts() ([]*Account, error)
@@ -71,9 +71,9 @@ func (s *PostgresStore) CreateAccountTable() error {
 	return err
 }
 
-// CreateAccount creates a new account in the database
+// CreateAccount creates a new account in the database.
 // Takes a pointer to an account
-func (s *PostgresStore) CreateAccount(acc *Account) error {
+func (s *PostgresStore) CreateAccount(acc *Account) (*Account, error) {
 	query := `INSERT INTO accounts (
 			first_name,
 			last_name,
@@ -84,8 +84,8 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 			is_admin
 			) VALUES (
 				$1, $2, $3, $4, $5, $6, $7
-			)`
-	resp, err := s.db.Query(
+			) RETURNING id`
+	row:= s.db.QueryRow(
 		query,
 		acc.FirstName,
 		acc.LastName,
@@ -96,12 +96,12 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 		acc.IsAdmin,
 	)
 
+	err := row.Scan(&acc.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	defer resp.Close()
-	return nil
+	return acc, nil
 }
 
 // DeleteAccount deletes an account from the database

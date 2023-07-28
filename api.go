@@ -161,11 +161,12 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return fmt.Errorf("error creating account: %v", err)
 	}
-	if err := s.store.CreateAccount(account); err != nil {
+	acc, err := s.store.CreateAccount(account); 
+	if err != nil {
 		return fmt.Errorf("error creating account: %v", err)
 	}
+	return WriteJSON(w, http.StatusOK, acc)
 
-	return WriteJSON(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
