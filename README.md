@@ -22,3 +22,36 @@ Future Tasks
 - [ ] Transaction history table
 - [ ] Testing (unit, integration, end-to-end)
 - [ ] Create a client UI using Go html templates or HTMX
+
+## Usage
+
+To run the server, run the following command:
+
+```bash
+make run
+```
+
+This calls the docker compose command to compile the Go code, run the server and the database.
+
+To stop the server, run the following command:
+
+```bash
+make stop
+```
+
+View the logs of the server, run the following command:
+
+```bash
+docker compose logs 
+# or 
+docker compose logs -f 
+# to follow the logs (attach terminal to logs)
+```
+
+If you want to completely remove the project including the image, containers, and volumes, run the following command:
+
+```bash
+make stop clean=true
+```bash```
+
+
