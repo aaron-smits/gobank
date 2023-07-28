@@ -57,6 +57,9 @@ func getIDFromClaims(token *jwt.Token) (int, error) {
 
 // Middleware for JWT authentication
 // 1. Validates the token
+// 2. Checks if the user is an admin if the endpoint is admin-only
+// 3. Checks if the user is accessing their own account by ID
+// If any of the above checks fail, the middleware returns an error
 func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("call to JWT middleware")
@@ -77,6 +80,7 @@ func withJWTAuth(handlerFunc http.HandlerFunc, s Storage, adminOnly bool) http.H
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting user ID from token"})
 			return
 		}
+
 		account, err := s.GetAccountByID(userID)
 		if err != nil {
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting account"})
