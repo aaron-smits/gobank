@@ -2,7 +2,15 @@ build:
 	@go build -o bin/gobank
 
 run: build
-	@./bin/gobank
+	docker compose up -d
+ifdef attach
+	docker compose up
+endif
 
-test:
-	@go test -v ./...
+stop:
+
+ifdef clean
+	docker compose down -v
+	docker volume prune
+endif
+	docker compose down
