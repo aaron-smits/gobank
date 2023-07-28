@@ -17,7 +17,8 @@ On the to do list:
 - [x] Add ability for admins to update accounts 
 - [ ] Logout endpoint
 - [ ] Method to invalidate JWT tokens
+
+Future Tasks
 - [ ] Transaction history table
-- [ ] Transaction history endpoint
 - [ ] Testing (unit, integration, end-to-end)
 - [ ] Create a client UI using Go html templates or HTMX
