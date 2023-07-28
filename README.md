@@ -14,6 +14,12 @@ Database is [PostgreSQL](https://www.postgresql.org/).
 
 Connects with the database using [pq](https://pkg.go.dev/github.com/lib/pq).
 
+The project is set up to run several docker containers using [docker-compose](https://docs.docker.com/compose/).
+
+
+I also learned how to use [make](https://www.gnu.org/software/make/) to automate the build process.
+
+
 ## About
 
 This project stems from a tutorial I found from [Anthony GG](https://www.youtube.com/watch?v=pwZuNmAzaH8).
