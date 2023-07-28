@@ -78,4 +78,4 @@ If you want to completely remove the project including the image, containers, an
 
 ```bash
 make stop clean=true
-```bash```
+```
