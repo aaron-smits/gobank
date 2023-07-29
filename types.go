@@ -1,14 +1,13 @@
 package main
 
 import (
-	"time"
 	"net/http"
+	"time"
 )
-
-
 
 // this type represents a function that takes a request and returns an error
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
+
 // Api error type for server error responses
 type ApiError struct {
 	Error string `json:"error"`
@@ -16,9 +15,9 @@ type ApiError struct {
 
 // TransferRequest is the request body for the transfer endpoint
 type TransferRequest struct {
-	ToAccountID int `json:"to_account_id"`
+	ToAccountID   int `json:"to_account_id"`
 	FromAccountID int `json:"from_account_id"`
-	Amount      int `json:"amount"`
+	Amount        int `json:"amount"`
 }
 
 // Account is the model for storing account information
@@ -39,8 +38,8 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccountNumber int64  `json:"account_number"`
-	Token         string `json:"token"`
+	AccountNumber int64  `json:"sub"` // Sub is part of the JWT spec
+	Token         string `json:"access_token"`
 }
 
 type CreateAccountRequest struct {
@@ -52,8 +51,8 @@ type CreateAccountRequest struct {
 }
 
 type UpdateAccountRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	AccountNumber int64 `json:"account_number"`
-	IsAdmin   bool   `json:"is_admin"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"last_name"`
+	AccountNumber int64  `json:"account_number"`
+	IsAdmin       bool   `json:"is_admin"`
 }
