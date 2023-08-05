@@ -4,7 +4,7 @@ A JSON API for a bank written in Go.
 
 I tried to mostly use the Go standard library.
 
-In place of the old go-to gorilla/mux, I use the lightweight [chi router](https://github.com/go-chi/chi).
+For a router, I use the [chi](https://github.com/go-chi/chi).
 
 Authorization is accomplished using [JWT](https://github.com/golang-jwt/jwt).
 
@@ -22,9 +22,9 @@ I also learned how to use [make](https://www.gnu.org/software/make/) to automate
 
 ## About
 
-This project stems from a tutorial I found from [Anthony GG](https://www.youtube.com/watch?v=pwZuNmAzaH8).
+This project stems from a video I found from [Anthony GG](https://www.youtube.com/watch?v=pwZuNmAzaH8).
 
-I also referenced [this youtube video](https://www.youtube.com/watch?v=p08c0-99SyU) to learn more about using docker-compose.
+I also referenced [this video](https://www.youtube.com/watch?v=p08c0-99SyU) to learn more about using docker-compose.
 
 My main goal with this project is the build a basic JSON API with Go to understand how developing web backends in Go works and the idioms Go developers use.
 
@@ -74,7 +74,7 @@ docker compose logs -f
 # to follow the logs (attach terminal to logs)
 ```
 
-If you want to completely remove the project including the image, containers, and volumes, run the following command:
+If you want to completely remove the project including the gobank image, containers, and volumes, run the following command:
 
 ```bash
 make stop clean=true
