@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    container_name: test-postgres
+    container_name: some-postgres
     image: postgres
     env_file:
       - .env

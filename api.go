@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Reprsents the JSON API server
@@ -28,6 +29,10 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	// Create a new chi router and register the routes
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.RequestID)
+
 	// The account endpoint is for creating and getting accounts. Admins only
 	router.HandleFunc("/accounts", withJWTAuth(true, MakeHTTPHandlerFunc(s.handleAccounts), s.store))
 	// This endpoint is for getting and deleting accounts by ID
@@ -64,7 +69,7 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	if !account.ComparePassword(req.Password) {
 		return fmt.Errorf("unauthorized")
 	}
-	token, err := makeJWTToken(account)
+	token, err := createJWTToken(account)
 	if err != nil {
 		return err
 	}
@@ -94,7 +99,7 @@ func (s *APIServer) handleAccounts(w http.ResponseWriter, r *http.Request) error
 	if r.Method == "POST" {
 		return s.handleCreateAccount(w, r)
 	}
-	
+
 	return fmt.Errorf("unsupported method %s", r.Method)
 }
 
@@ -107,8 +112,9 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 		}
 
 		account, err := s.store.GetAccountByID(id)
+		// if no rows are found error, return 404 "account not found"	
 		if err != nil {
-			return err
+			return fmt.Errorf("account not found")
 		}
 
 		return WriteJSON(w, http.StatusOK, account)
@@ -152,16 +158,16 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 		return fmt.Errorf("invalid request body")
 	}
 	account, err := NewAccount(
-		req.FirstName, 
-		req.LastName, 
-		req.Password,  
-		false, 
+		req.FirstName,
+		req.LastName,
+		req.Password,
+		false,
 		req.Balance,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating account: %v", err)
 	}
-	acc, err := s.store.CreateAccount(account); 
+	acc, err := s.store.CreateAccount(account)
 	if err != nil {
 		return fmt.Errorf("error creating account: %v", err)
 	}
@@ -184,12 +190,13 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 }
 
 // Shape of the request body for updating an account
-//{
-//	"first_name": "John",
-//	"last_name": "Doe",
-//	"account_number": 123456,
-//	"is_admin": false
-//}
+//
+//	{
+//		"first_name": "John",
+//		"last_name": "Doe",
+//		"account_number": 123456,
+//		"is_admin": false
+//	}
 func (s *APIServer) handleUpdateAccount(w http.ResponseWriter, r *http.Request) error {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
@@ -207,11 +214,11 @@ func (s *APIServer) handleUpdateAccount(w http.ResponseWriter, r *http.Request) 
 	}
 
 	updatedAccount := &Account{
-		ID:                acc.ID,
-		FirstName:         req.FirstName,
-		LastName:          req.LastName,
-		AccountNumber:     req.AccountNumber,
-		IsAdmin: 		   req.IsAdmin,
+		ID:            acc.ID,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		AccountNumber: req.AccountNumber,
+		IsAdmin:       req.IsAdmin,
 	}
 
 	_, err = s.store.UpdateAccountByID(id, updatedAccount)
@@ -221,32 +228,30 @@ func (s *APIServer) handleUpdateAccount(w http.ResponseWriter, r *http.Request) 
 
 	return WriteJSON(w, http.StatusOK, updatedAccount)
 
-
 }
 
-//Request body sample
-//{
-//	"to_account_id": 123456,
-//	"from_account_id": 123456,
-//	"amount": 100
-//}
+// Request body sample
+//
+//	{
+//		"to_account_id": 123456,
+//		"from_account_id": 123456,
+//		"amount": 100
+//	}
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
 	transferReq := new(TransferRequest)
 	if err := json.NewDecoder(r.Body).Decode(transferReq); err != nil {
 		return fmt.Errorf("invalid request body")
 	}
 
-
 	acc, err := s.store.MakeTransfer(
-		transferReq.ToAccountID, 
-		transferReq.FromAccountID, 
+		transferReq.ToAccountID,
+		transferReq.FromAccountID,
 		transferReq.Amount,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("error making transfer: %v", err)
 	}
-
 
 	return WriteJSON(w, http.StatusOK, fmt.Sprintf("Transfer successful. New balance: %d", acc.Balance))
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -18,7 +18,7 @@ func (a *Account) ComparePassword(pw string) bool {
 
 // Helper for making JWT token
 // Creates a JWT token with the account number and user ID as claims
-func makeJWTToken(account *Account) (string, error) {
+func createJWTToken(account *Account) (string, error) {
 	claims := jwt.MapClaims{
 		"account_number": account.AccountNumber,
 		"user_id":        account.ID,
@@ -93,7 +93,7 @@ func withJWTAuth(adminOnly bool, handlerFunc http.HandlerFunc, s Storage) http.H
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Error: "error getting account"})
 			return
 		}
-		
+
 		// Check if the user is an admin if the endpoint is admin-only
 		if adminOnly && !account.IsAdmin {
 			WriteJSON(w, http.StatusUnauthorized, ApiError{Error: "insufficient permissions"})

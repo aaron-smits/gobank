@@ -37,11 +37,10 @@ On the to do list:
   - [X] Implement transfer endpoint
 - [x] Error handling enhancements
 - [x] Add ability for admins to update accounts 
-- [ ] Logout endpoint
-- [ ] Method to invalidate JWT tokens
 - [ ] Investigate adding chi middleware
 - [ ] Investigate adding logging
 - [ ] Write docs for endpoints
+  - [ ] Open API library 
 - [ ] Clean up comments
 Future Tasks
 - [ ] Transaction history table
