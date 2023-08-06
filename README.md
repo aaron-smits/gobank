@@ -4,7 +4,7 @@ A JSON API for a bank written in Go.
 
 I tried to mostly use the Go standard library.
 
-For a router, I use the [chi](https://github.com/go-chi/chi).
+For a router, I use [chi](https://github.com/go-chi/chi).
 
 Authorization is accomplished using [JWT](https://github.com/golang-jwt/jwt).
 
